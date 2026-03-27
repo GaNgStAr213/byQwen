@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>100 Офлайн Игр</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --secondary: #2c3e50;
+            --accent: #e74c3c;
+            --bg: #f5f6fa;
+            --text: #2d3436;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--secondary);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        h1 { margin: 0; font-size: 1.5rem; }
+        h2 { margin: 0; font-size: 1.2rem; opacity: 0.9; }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Game Grid */
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .game-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border: 2px solid transparent;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-color: var(--primary);
+        }
+
+        .game-card.locked {
+            opacity: 0.6;
+            cursor: not-allowed;
+            filter: grayscale(1);
+        }
+
+        .game-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .game-title {
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        /* Game Area */
+        #game-area {
+            display: none;
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            min-height: 400px;
+            position: relative;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: var(--secondary);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .difficulty-selector {
+            margin: 20px 0;
+        }
+
+        .diff-btn {
+            background: var(--bg);
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            padding: 8px 16px;
+            margin: 0 5px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .diff-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        #game-canvas {
+            border: 2px solid var(--secondary);
+            border-radius: 5px;
+            background: #fff;
+            margin: 20px auto;
+            max-width: 100%;
+        }
+
+        .game-controls {
+            margin-top: 20px;
+        }
+
+        button.action-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button.action-btn:hover {
+            background: #357abd;
+        }
+
+        .score-board {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin: 10px 0;
+            color: var(--secondary);
+        }
+
+        /* Modal for Difficulty */
+        #difficulty-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .hidden { display: none !important; }
+        
+        /* Specific Game Styles */
+        #snake-canvas { background: #222; }
+        .reaction-box {
+            width: 100%;
+            height: 200px;
+            background: #ff6b6b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .reaction-box.wait { background: #4ecdc4; }
+        .reaction-box.go { background: #ffeaa7; color: #333; }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>100 Офлайн Игр</h1>
+    <h2 id="header-subtitle">Выберите игру</h2>
+</header>
+
+<div class="container">
+    <!-- Main Menu -->
+    <div id="main-menu">
+        <div class="game-grid" id="game-list">
+            <!-- Games will be injected here via JS -->
+        </div>
+    </div>
+
+    <!-- Game Area -->
+    <div id="game-area">
+        <button class="back-btn" onclick="app.returnToMenu()">← Назад</button>
+        <h2 id="current-game-title">Название игры</h2>
+        
+        <div class="difficulty-selector" id="diff-selector">
+            <span>Сложность: </span>
+            <button class="diff-btn active" onclick="app.setDifficulty('easy')">Легко</button>
+            <button class="diff-btn" onclick="app.setDifficulty('medium')">Нормально</button>
+            <button class="diff-btn" onclick="app.setDifficulty('hard')">Сложно</button>
+        </div>
+
+        <div class="score-board">
+            Счет: <span id="score-display">0</span> | Уровень: <span id="level-display">1</span>
+        </div>
+
+        <div id="game-content">
+            <!-- Dynamic Game Content -->
+        </div>
+
+        <div class="game-controls" id="game-controls">
+            <!-- Dynamic Controls -->
+        </div>
+    </div>
+</div>
+
+<!-- Difficulty Selection Modal -->
+<div id="difficulty-modal">
+    <div class="modal-content">
+        <h3>Выберите сложность</h3>
+        <div style="margin: 20px 0;">
+            <button class="action-btn" onclick="app.startGameWithDiff('easy')">Легко</button>
+            <button class="action-btn" onclick="app.startGameWithDiff('medium')">Нормально</button>
+            <button class="action-btn" onclick="app.startGameWithDiff('hard')">Сложно</button>
+        </div>
+        <button class="diff-btn" onclick="document.getElementById('difficulty-modal').style.display='none'">Отмена</button>
+    </div>
+</div>
+
+<script>
+/**
+ * GAME ENGINE & REGISTRY
+ * Architecture for scaling to 100 games
+ */
+
+const GameRegistry = {
+    games: []
+};
+
+class BaseGame {
+    constructor(id, title, icon, description) {
+        this.id = id;
+        this.title = title;
+        this.icon = icon;
+        this.description = description;
+        this.score = 0;
+        this.level = 1;
+        this.difficulty = 'easy'; // easy, medium, hard
+        this.isActive = false;
+        this.interval = null;
+    }
+
+    init(container, controls) {
+        this.container = container;
+        this.controls = controls;
+        this.isActive = true;
+        this.render();
+    }
+
+    render() {
+        // Override in child classes
+    }
+
+    start() {
+        this.score = 0;
+        this.level = 1;
+        app.updateStats();
+        this.onStart();
+    }
+
+    onStart() {
+        // Override
+    }
+
+    stop() {
+        this.isActive = false;
+        if (this.interval) clearInterval(this.interval);
+        this.container.innerHTML = '';
+        this.controls.innerHTML = '';
+    }
+
+    setDifficulty(diff) {
+        this.difficulty = diff;
+    }
+
+    updateScore(points) {
+        this.score += points;
+        app.updateStats();
+    }
+
+    nextLevel() {
+        this.level++;
+        app.updateStats();
+        this.onLevelUp();
+    }
+
+    onLevelUp() {
+        // Override
+    }
+    
+    gameOver() {
+        this.stop();
+        this.container.innerHTML = `<h3>Игра окончена!</h3><p>Ваш счет: ${this.score}</p>`;
+        const restartBtn = document.createElement('button');
+        restartBtn.className = 'action-btn';
+        restartBtn.innerText = 'Играть снова';
+        restartBtn.onclick = () => this.start();
+        this.controls.appendChild(restartBtn);
+    }
+}
+
+// --- IMPLEMENTED GAMES ---
+
+// 1. Clicker Game
+class ClickerGame extends BaseGame {
+    constructor() {
+        super(1, "Супер Кликер", "🖱️", "Кликай как можно быстрее!");
+    }
+
+    render() {
+        this.container.innerHTML = `
+            <div style="font-size: 5rem; cursor: pointer; user-select: none;" id="click-target">🔘</div>
+            <p>Кликай по кнопке!</p>
+        `;
+        
+        const target = document.getElementById('click-target');
+        target.onclick = () => {
+            if (!this.isActive) return;
+            this.updateScore(1);
+            target.style.transform = 'scale(0.9)';
+            setTimeout(() => target.style.transform = 'scale(1)', 50);
+            
+            // Level up every 10 clicks
+            if (this.score % 10 === 0) this.nextLevel();
+        };
+
+        const startBtn = document.createElement('button');
+        startBtn.className = 'action-btn';
+        startBtn.innerText = 'Старт';
+        startBtn.onclick = () => this.start();
+        this.controls.appendChild(startBtn);
+    }
+
+    onStart() {
+        this.container.querySelector('#click-target').innerText = '🚀';
+    }
+
+    onLevelUp() {
+        const target = this.container.querySelector('#click-target');
+        target.innerText = ['🔥', '⚡', '💎', '👑'][Math.floor(Math.random() * 4)];
+    }
+}
+
+// 2. Guess The Number
+class GuessNumberGame extends BaseGame {
+    constructor() {
+        super(2, "Угадай Число", "❓", "Угадай загаданное число");
+        this.targetNumber = 0;
+        this.maxRange = 10;
+    }
+
+    render() {
+        this.container.innerHTML = `
+            <div style="font-size: 1.2rem; margin: 20px;">
+                Я загадал число от 1 до <span id="range-val">${this.maxRange}</span>.<br>
+                Введи свой вариант:
+            </div>
+            <input type="number" id="guess-input" style="padding: 10px; font-size: 1.2rem; width: 100px;">
+            <div id="feedback" style="margin-top: 20px; font-weight: bold;"></div>
+        `;
+
+        const input = document.getElementById('guess-input');
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.checkGuess();
+        });
+
+        const btn = document.createElement('button');
+        btn.className = 'action-btn';
+        btn.innerText = 'Проверить';
+        btn.onclick = () => this.checkGuess();
+        this.controls.appendChild(btn);
+        
+        const newGameBtn = document.createElement('button');
+        newGameBtn.className = 'action-btn';
+        newGameBtn.innerText = 'Новая игра';
+        newGameBtn.onclick = () => this.start();
+        this.controls.appendChild(newGameBtn);
+    }
+
+    onStart() {
+        const multipliers = { easy: 10, medium: 50, hard: 100 };
+        this.maxRange = multipliers[this.difficulty];
+        this.targetNumber = Math.floor(Math.random() * this.maxRange) + 1;
+        document.getElementById('range-val').innerText = this.maxRange;
+        document.getElementById('guess-input').value = '';
+        document.getElementById('feedback').innerText = '';
+        document.getElementById('guess-input').focus();
+    }
+
+    checkGuess() {
+        const input = document.getElementById('guess-input');
+        const feedback = document.getElementById('feedback');
+        const val = parseInt(input.value);
+
+        if (!val) return;
+
+        if (val === this.targetNumber) {
+            feedback.innerText = "Верно! 🎉";
+            feedback.style.color = "green";
+            this.updateScore(10);
+            this.nextLevel();
+            setTimeout(() => this.start(), 1000);
+        } else if (val < this.targetNumber) {
+            feedback.innerText = "Больше! ⬆️";
+            feedback.style.color = "orange";
+        } else {
+            feedback.innerText = "Меньше! ⬇️";
+            feedback.style.color = "orange";
+        }
+        input.value = '';
+        input.focus();
+    }
+
+    onLevelUp() {
+        // Difficulty increases automatically by range in start()
+    }
+}
+
+// 3. Reaction Test
+class ReactionGame extends BaseGame {
+    constructor() {
+        super(3, "Тест Реакции", "⚡", "Нажми, когда станет зеленым");
+        this.startTime = 0;
+        this.timeout = null;
+    }
+
+    render() {
+        this.container.innerHTML = `
+            <div id="reaction-box" class="reaction-box" onclick="app.currentGame.handleBoxClick()">
+                Нажми 'Старт'
+            </div>
+        `;
+
+        const startBtn = document.createElement('button');
+        startBtn.className = 'action-btn';
+        startBtn.innerText = 'Старт';
+        startBtn.onclick = () => this.start();
+        this.controls.appendChild(startBtn);
+    }
+
+    onStart() {
+        const box = document.getElementById('reaction-box');
+        box.className = 'reaction-box wait';
+        box.innerText = 'Жди...';
+        
+        const delay = Math.random() * 2000 + 1000;
+        this.timeout = setTimeout(() => {
+            if (!this.isActive) return;
+            box.className = 'reaction-box go';
+            box.innerText = 'ЖМИ!';
+            this.startTime = Date.now();
+        }, delay);
+    }
+
+    handleBoxClick() {
+        const box = document.getElementById('reaction-box');
+        if (!this.isActive) return;
+
+        if (box.className.includes('wait')) {
+            clearTimeout(this.timeout);
+            box.innerText = 'Слишком рано! Попробуй снова.';
+            return;
+        }
+
+        if (box.className.includes('go')) {
+            const reactionTime = Date.now() - this.startTime;
+            box.innerText = `${reactionTime} мс`;
+            box.className = 'reaction-box';
+            
+            this.updateScore(Math.max(0, 1000 - reactionTime));
+            
+            if (reactionTime < (this.difficulty === 'hard' ? 200 : 400)) {
+                this.nextLevel();
+                setTimeout(() => this.start(), 1000);
+            } else {
+                setTimeout(() => this.start(), 1000);
+            }
+        }
+    }
+    
+    stop() {
+        super.stop();
+        clearTimeout(this.timeout);
+    }
+}
+
+// 4. Math Quiz
+class MathGame extends BaseGame {
+    constructor() {
+        super(4, "Математика", "🧮", "Решай примеры быстро");
+        this.num1 = 0;
+        this.num2 = 0;
+        this.operator = '+';
+    }
+
+    render() {
+        this.container.innerHTML = `
+            <div style="font-size: 2rem; margin: 20px;">
+                <span id="math-problem">2 + 2 = ?</span>
+            </div>
+            <div id="math-options" style="display: flex; gap: 10px; justify-content: center;"></div>
+        `;
+
+        const startBtn = document.createElement('button');
+        startBtn.className = 'action-btn';
+        startBtn.innerText = 'Старт';
+        startBtn.onclick = () => this.start();
+        this.controls.appendChild(startBtn);
+    }
+
+    onStart() {
+        this.generateProblem();
+    }
+
+    generateProblem() {
+        const diffs = {
+            easy: { max: 10, ops: ['+', '-'] },
+            medium: { max: 20, ops: ['+', '-', '*'] },
+            hard: { max: 50, ops: ['+', '-', '*', '/'] }
+        };
+        
+        const config = diffs[this.difficulty];
+        this.operator = config.ops[Math.floor(Math.random() * config.ops.length)];
+        
+        if (this.operator === '/') {
+            this.num2 = Math.floor(Math.random() * 9) + 2;
+            this.num1 = this.num2 * (Math.floor(Math.random() * 9) + 1);
+        } else if (this.operator === '*') {
+            this.num1 = Math.floor(Math.random() * config.max/2) + 1;
+            this.num2 = Math.floor(Math.random() * 10) + 1;
+        } else {
+            this.num1 = Math.floor(Math.random() * config.max) + 1;
+            this.num2 = Math.floor(Math.random() * config.max) + 1;
+            if (this.operator === '-' && this.num1 < this.num2) [this.num1, this.num2] = [this.num2, this.num1];
+        }
+
+        const correctAnswer = eval(`${this.num1} ${this.operator} ${this.num2}`);
+        document.getElementById('math-problem').innerText = `${this.num1} ${this.operator} ${this.num2} = ?`;
+
+        // Generate options
+        let options = [correctAnswer];
+        while (options.length < 3) {
+            let offset = Math.floor(Math.random() * 5) + 1;
+            if (Math.random() > 0.5) offset = -offset;
+            let wrong = correctAnswer + offset;
+            if (wrong >= 0 && !options.includes(wrong)) options.push(wrong);
+        }
+        options.sort(() => Math.random() - 0.5);
+
+        const optsContainer = document.getElementById('math-options');
+        optsContainer.innerHTML = '';
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'action-btn';
+            btn.innerText = opt;
+            btn.onclick = () => {
+                if (opt === correctAnswer) {
+                    this.updateScore(5);
+                    this.nextLevel();
+                    this.generateProblem();
+                } else {
+                    this.gameOver();
+                }
+            };
+            optsContainer.appendChild(btn);
+        });
+    }
+}
+
+// 5. Snake (Simplified)
+class SnakeGame extends BaseGame {
+    constructor() {
+        super(5, "Змейка", "🐍", "Классическая змейка");
+        this.grid = 20;
+        this.canvas = null;
+        this.ctx = null;
+        this.snake = [];
+        this.food = {};
+        this.dx = 0;
+        this.dy = 0;
+        this.speed = 100;
+    }
+
+    render() {
+        this.container.innerHTML = `<canvas id="snake-canvas" width="300" height="300"></canvas>`;
+        this.canvas = document.getElementById('snake-canvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        document.addEventListener('keydown', this.handleInput.bind(this));
+
+        const info = document.createElement('p');
+        info.innerText = "Управление: Стрелки или WASD";
+        this.controls.appendChild(info);
+
+        const startBtn = document.createElement('button');
+        startBtn.className = 'action-btn';
+        startBtn.innerText = 'Старт';
+        startBtn.onclick = () => this.start();
+        this.controls.appendChild(startBtn);
+    }
+
+    onStart() {
+        this.snake = [{x: 150, y: 150}, {x: 140, y: 150}, {x: 130, y: 150}];
+        this.dx = this.grid;
+        this.dy = 0;
+        this.score = 0;
+        this.placeFood();
+        
+        let speedMap = { easy: 150, medium: 100, hard: 60 };
+        this.speed = speedMap[this.difficulty];
+
+        if (this.interval) clearInterval(this.interval);
+        this.interval = setInterval(this.loop.bind(this), this.speed);
+    }
+
+    placeFood() {
+        this.food = {
+            x: Math.floor(Math.random() * (this.canvas.width / this.grid)) * this.grid,
+            y: Math.floor(Math.random() * (this.canvas.height / this.grid)) * this.grid
+        };
+    }
+
+    loop() {
+        if (!this.isActive) return;
+
+        const head = { x: this.snake[0].x + this.dx, y: this.snake[0].y + this.dy };
+
+        // Wall collision
+        if (head.x < 0 || head.x >= this.canvas.width || head.y < 0 || head.y >= this.canvas.height) {
+            this.gameOver();
+            return;
+        }
+
+        // Self collision
+        for (let i = 0; i < this.snake.length; i++) {
+            if (head.x === this.snake[i].x && head.y === this.snake[i].y) {
+                this.gameOver();
+                return;
+            }
+        }
+
+        this.snake.unshift(head);
+
+        // Eat food
+        if (head.x === this.food.x && head.y === this.food.y) {
+            this.updateScore(1);
+            this.placeFood();
+            if (this.score % 5 === 0) this.nextLevel();
+        } else {
+            this.snake.pop();
+        }
+
+        this.draw();
+    }
+
+    draw() {
+        this.ctx.fillStyle = '#222';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.ctx.fillStyle = '#ff6b6b';
+        this.ctx.fillRect(this.food.x, this.food.y, this.grid-1, this.grid-1);
+
+        this.ctx.fillStyle = '#4ecdc4';
+        this.snake.forEach(part => {
+            this.ctx.fillRect(part.x, part.y, this.grid-1, this.grid-1);
+        });
+    }
+
+    handleInput(e) {
+        if (!this.isActive) return;
+        const key = e.key;
+        if ((key === 'ArrowLeft' || key === 'a') && this.dx === 0) { this.dx = -this.grid; this.dy = 0; }
+        if ((key === 'ArrowUp' || key === 'w') && this.dy === 0) { this.dy = -this.grid; this.dx = 0; }
+        if ((key === 'ArrowRight' || key === 'd') && this.dx === 0) { this.dx = this.grid; this.dy = 0; }
+        if ((key === 'ArrowDown' || key === 's') && this.dy === 0) { this.dy = this.grid; this.dx = 0; }
+    }
+    
+    stop() {
+        super.stop();
+        document.removeEventListener('keydown', this.handleInput.bind(this));
+    }
+}
+
+// Register Games
+GameRegistry.games.push(new ClickerGame());
+GameRegistry.games.push(new GuessNumberGame());
+GameRegistry.games.push(new ReactionGame());
+GameRegistry.games.push(new MathGame());
+GameRegistry.games.push(new SnakeGame());
+
+// Fill remaining slots with placeholders to show scale
+for (let i = 6; i <= 100; i++) {
+    GameRegistry.games.push({
+        id: i,
+        title: `Игра ${i}`,
+        icon: '🔒',
+        description: 'В разработке...',
+        isPlaceholder: true
+    });
+}
+
+/**
+ * APP CONTROLLER
+ */
+const app = {
+    currentGame: null,
+    difficulty: 'easy',
+
+    init() {
+        this.renderMenu();
+    },
+
+    renderMenu() {
+        const grid = document.getElementById('game-list');
+        grid.innerHTML = '';
+
+        GameRegistry.games.forEach(game => {
+            const card = document.createElement('div');
+            card.className = `game-card ${game.isPlaceholder ? 'locked' : ''}`;
+            card.innerHTML = `
+                <span class="game-icon">${game.icon}</span>
+                <div class="game-title">${game.title}</div>
+            `;
+            
+            if (!game.isPlaceholder) {
+                card.onclick = () => this.selectGame(game);
+            }
+            grid.appendChild(card);
+        });
+    },
+
+    selectGame(game) {
+        this.currentGame = game;
+        document.getElementById('main-menu').style.display = 'none';
+        document.getElementById('game-area').style.display = 'block';
+        document.getElementById('current-game-title').innerText = game.title;
+        document.getElementById('header-subtitle').innerText = game.title;
+        
+        // Reset UI
+        document.getElementById('score-display').innerText = '0';
+        document.getElementById('level-display').innerText = '1';
+        document.getElementById('game-content').innerHTML = '';
+        document.getElementById('game-controls').innerHTML = '';
+        
+        // Show difficulty modal
+        document.getElementById('difficulty-modal').style.display = 'flex';
+    },
+
+    startGameWithDiff(diff) {
+        document.getElementById('difficulty-modal').style.display = 'none';
+        this.setDifficulty(diff);
+        
+        const content = document.getElementById('game-content');
+        const controls = document.getElementById('game-controls');
+        
+        this.currentGame.init(content, controls);
+        this.currentGame.start();
+    },
+
+    setDifficulty(diff) {
+        this.difficulty = diff;
+        if (this.currentGame) {
+            this.currentGame.setDifficulty(diff);
+        }
+        
+        // Update UI buttons
+        document.querySelectorAll('.diff-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.innerText.toLowerCase().includes(diff === 'easy' ? 'легко' : diff === 'medium' ? 'нормально' : 'сложно')) {
+                btn.classList.add('active');
+            }
+        });
+    },
+
+    returnToMenu() {
+        if (this.currentGame) {
+            this.currentGame.stop();
+        }
+        this.currentGame = null;
+        document.getElementById('game-area').style.display = 'none';
+        document.getElementById('main-menu').style.display = 'block';
+        document.getElementById('header-subtitle').innerText = 'Выберите игру';
+    },
+
+    updateStats() {
+        if (this.currentGame) {
+            document.getElementById('score-display').innerText = this.currentGame.score;
+            document.getElementById('level-display').innerText = this.currentGame.level;
+        }
+    }
+};
+
+// Start App
+app.init();
+
+</script>
+</body>
+</html>
