@@ -1,0 +1,44 @@
+```
+# Unity specific
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+*.unityproj
+*.sln
+*.csproj
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.meta
+!*.cs.meta
+!*.js.meta
+!*.boo.meta
+!*.shader.meta
+!*.compute.meta
+!*.cginc.meta
+!*.asmdef.meta
+!*.rsp.meta
+!*.asmref.meta
+
+# Visual Studio
+.vs/
+
+# Rider
+.idea/
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+```
